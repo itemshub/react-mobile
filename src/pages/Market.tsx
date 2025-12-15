@@ -261,7 +261,7 @@ const Market = () => {
             {skins.map((skin) => (
               <div 
                 key={skin.skin}
-                onClick={() => navigate(`/skin/${skin.id}`)}
+                onClick={() => navigate(`/skin/${skin.skin}`)}
                 className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-colors cursor-pointer"
               >
                 <div className="aspect-square bg-gray-700 relative">

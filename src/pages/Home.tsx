@@ -28,20 +28,16 @@ const Home = () => {
 
     load();
   }, []);
-
-
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      navigate(`/market?search=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
   if (!indexData?.skins) {
     return (
       <LoadingPage/>
     );
   }
-
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      navigate(`/market?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
   const quickActions = [
     {
       icon: TrendingUp,
