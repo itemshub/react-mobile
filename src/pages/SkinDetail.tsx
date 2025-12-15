@@ -5,7 +5,7 @@ import { mockSkins } from '../data/mockData';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { api_case, api_index } from '@/utils/request';
 import { LoadingPage } from '@/components/LoadingPage';
-import { getSkinsById } from '@/utils/utils';
+import { base32Encode, getSkinsById } from '@/utils/utils';
 
 const SkinDetail = () => {
   const { id } = useParams();
@@ -165,7 +165,9 @@ const SkinDetail = () => {
           
           <div className="space-y-3">
             {targetSkin.data.data.map((market, index) => (
-              <div key={index} className="bg-gray-800 rounded-lg p-4 flex items-center justify-between">
+              <div key={index} className="bg-gray-800 rounded-lg p-4 flex items-center justify-between"
+              onClick={() => navigate(`/market/${base32Encode(market.name)}`)}
+              >
                 <div>
                   <h4 className="font-medium">{market.name}</h4>
                   <p className="text-sm text-gray-400">交易量: {market.active_offers}</p>
@@ -244,7 +246,9 @@ const SkinDetail = () => {
               </div>
             </div>
             
-            <button className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium transition-colors">
+            <button className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+            onClick={() => navigate(`/arbitrage/${base32Encode(`${targetSkin.id}#${arbi.from.name}#${arbi.to.name}`)}`)}
+            >
               查看套利详情
             </button>
           </div>

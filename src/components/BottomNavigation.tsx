@@ -10,8 +10,8 @@ const BottomNavigation = () => {
     { path: '/', icon: Home, label: '首页' },
     { path: '/market', icon: TrendingUp, label: '市场' },
     { path: '/arbitrage', icon: Package, label: '套利' },
-    { path: '/vault', icon: Vault, label: '质押' },
-    { path: '/profile', icon: User, label: '我的' }
+    // { path: '/vault', icon: Vault, label: '质押' },
+    // { path: '/profile', icon: User, label: '我的' }
   ];
 
   return (

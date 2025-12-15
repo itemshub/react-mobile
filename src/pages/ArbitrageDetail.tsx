@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRightLeft, TrendingUp, Calculator, AlertCircle, Externa
 import { mockArbitrage } from '../data/mockData';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { api_case, api_index } from '@/utils/request';
-import { base32Decode, getMarketsByName, getSkinsById, getTimeDiffText } from '@/utils/utils';
+import { base32Decode, base32Encode, getMarketsByName, getSkinsById, getTimeDiffText } from '@/utils/utils';
 import { LoadingPage } from '@/components/LoadingPage';
 
 const ArbitrageDetail = () => {
@@ -87,7 +87,7 @@ const ArbitrageDetail = () => {
   load();
 }, []);
 
-  if (!indexData?.skins) {
+  if (!indexData?.skins || !arbi?.from) {
     return (
       <LoadingPage/>
     );
@@ -268,7 +268,13 @@ const ArbitrageDetail = () => {
           <h3 className="text-lg font-semibold mb-4">价格对比</h3>
           <div className="bg-gray-800 rounded-lg p-6">
             <div className="flex items-center justify-between mb-6">
-              <div className="text-center flex-1">
+              <div className="text-center flex-1"
+              onClick={
+                ()=>{
+                  navigate(`/market/${base32Encode(arbi.from.name)}`)
+                }
+              }
+              >
                 <p className="text-sm text-gray-400 mb-2">买入市场</p>
                 <div className="bg-blue-600 rounded-lg p-4">
                   <p className="font-bold text-white text-lg">{arbi.from.name}</p>
@@ -283,7 +289,13 @@ const ArbitrageDetail = () => {
                 <ArrowRightLeft className="text-orange-500" size={32} />
               </div>
               
-              <div className="text-center flex-1">
+              <div className="text-center flex-1"
+              onClick={
+              ()=>{
+                navigate(`/market/${base32Encode(arbi.to.name)}`)
+              }
+            }
+              >
                 <p className="text-sm text-gray-400 mb-2">卖出市场</p>
                 <div className="bg-green-600 rounded-lg p-4">
                   <p className="font-bold text-white text-lg">{arbi.to.name}</p>

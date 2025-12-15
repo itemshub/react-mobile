@@ -5,7 +5,7 @@ import { mockDashboardStats, mockCases, mockArbitrage, mockAnnouncements } from 
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { LoadingPage } from '@/components/LoadingPage';
 import { api_case, api_index } from '@/utils/request';
-import { getSkinsById, getSkinsNameById, getTimeDiffText } from '@/utils/utils';
+import { base32Encode, getSkinsById, getSkinsNameById, getTimeDiffText } from '@/utils/utils';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -181,7 +181,7 @@ const Home = () => {
               <div 
                 key={caseItem.id} 
                 className="bg-gray-800 rounded-lg p-4 flex items-center gap-4 hover:bg-gray-700 transition-colors cursor-pointer"
-                onClick={() => navigate(`/market/${caseItem.id}`)}
+                onClick={() => navigate(`/skin/${caseItem.id}`)}
               >
                 <img 
                   src={caseItem.img_url} 
@@ -211,7 +211,7 @@ const Home = () => {
               <div 
                 key={arbitrage.skin.skin}
                 className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors cursor-pointer"
-                onClick={() => navigate(`/arbitrage/${arbitrage.skin.skin}`)}
+                onClick={() => navigate(`/arbitrage/${base32Encode(`${arbitrage.skin.skin}#${arbitrage.from.name}#${arbitrage.to.name}`)}`)}
               >
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-medium">{getSkinsNameById(cases,arbitrage.skin.skin) ? getSkinsNameById(cases,arbitrage.skin.skin).name : ""}</h4>
@@ -238,7 +238,7 @@ const Home = () => {
           <div className="space-y-3">
             {indexData.announce.map((announcement) => (
               <div 
-                key={announcement.id}
+                key={announcement.timestamp}
                 className="bg-gray-800 rounded-lg p-4 border-l-4 border-orange-500"
               >
                 <h4 className="font-medium text-white mb-1">{announcement.title}</h4>

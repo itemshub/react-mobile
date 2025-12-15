@@ -1,15 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { mockSkins } from '../data/mockData';
+import { api_case, api_index } from '@/utils/request';
+import { base32Decode, getSkinsNameById } from '@/utils/utils';
+import { LoadingPage } from '@/components/LoadingPage';
 
 const MarketDetail = () => {
-  const { platform, id } = useParams();
-  const navigate = useNavigate();
-  
-  // Mock market data based on platform
-  const getMarketData = () => {
-    switch (platform) {
+  const { platform} = useParams();
+
+  const [marketData, setMarketData] = useState<any>({})
+  const [marketSkins, setMarketSkins] = useState<any[]>([])
+
+  const [indexData, setIndexData] = useState<any>({});
+  const [cases, setCases] = useState<any>([]);
+
+  const [market, setMarket] = useState<any>({});
+
+    // Mock market data based on platform
+  const getMarketData = (pla:string) => {
+    switch (pla) {
       case 'buff': return {
         name: 'Buff163',
         color: 'text-blue-400',
@@ -45,8 +55,49 @@ const MarketDetail = () => {
     }
   };
 
-  const marketData = getMarketData();
-  const marketSkins = mockSkins.slice(0, 6); // Mock 6 items from this market
+
+  const markets = ['buff', 'c5', 'steam'] as const;
+  type MarketPlatform = typeof markets[number];
+  const getRandomMarketPlatform = (): MarketPlatform => {
+    const idx = Math.floor(Math.random() * markets.length);
+    return markets[idx];
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data= await api_index()
+        setIndexData(data?.data);
+        console.log(data?.data.skins)
+        const cs = await api_case();
+        setCases(cs?.data);
+
+        for(let i of data.data.markets)
+        {
+          // console.log(i)
+          if(i.name.toLocaleLowerCase() == platform?.toLocaleLowerCase() || i.name.toLocaleLowerCase() == base32Decode(platform)?.toLocaleLowerCase())
+          {
+            console.log("name match :: ",i)
+            setMarket(i);
+            setMarketData(getMarketData(getRandomMarketPlatform()))
+          }
+        }
+      } catch (err) {
+        console.error("请求失败:", err);
+      }
+    };
+
+    load();
+  }, []);
+  const navigate = useNavigate();
+  
+  if (!marketData?.name) {
+    return (
+      <LoadingPage/>
+    );
+  }
+  
+
 
   return (
     <div className="min-h-screen bg-gray-900 text-white pb-20">
@@ -68,24 +119,25 @@ const MarketDetail = () => {
         {/* Market Info */}
         <div className={`${marketData.bgColor} rounded-lg p-6 mb-6`}>
           <div className="text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <ExternalLink className={marketData.color} size={24} />
+            <div className="w-24 h-24 bg-white/10 rounded-lg flex items-center justify-center mx-auto mb-4">
+              {/* <ExternalLink className={marketData.color} size={24} /> */}
+              <img src={market.img_url} className='w-24 h-24'/>
             </div>
-            <h2 className={`text-2xl font-bold ${marketData.color} mb-2`}>{marketData.name}</h2>
+            <h2 className={`text-2xl font-bold ${marketData.color} mb-2`}>{market.name}</h2>
             <p className="text-gray-400 text-sm mb-4">专业游戏交易平台</p>
             
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="text-center">
                 <p className="text-sm text-gray-400">手续费</p>
-                <p className="text-lg font-bold text-white">{marketData.fee}</p>
+                <p className="text-lg font-bold text-white">{market.seller_fee}</p>
               </div>
               <div className="text-center">
                 <p className="text-sm text-gray-400">货币</p>
-                <p className="text-lg font-bold text-white">{marketData.currency}</p>
+                <p className="text-lg font-bold text-white">{"USD"}</p>
               </div>
             </div>
             
-            <div className="text-left">
+            {/* <div className="text-left">
               <h4 className="font-medium mb-2">平台特色</h4>
               <div className="space-y-1">
                 {marketData.features.map((feature, index) => (
@@ -95,7 +147,7 @@ const MarketDetail = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -123,14 +175,14 @@ const MarketDetail = () => {
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-4">热门商品</h3>
           <div className="space-y-3">
-            {marketSkins.map((skin) => (
+            {indexData.skins.map((skin) => (
               <div 
-                key={skin.id}
-                onClick={() => navigate(`/skin/${skin.id}`)}
+                key={skin.skin}
+                onClick={() => navigate(`/skin/${skin.skin}`)}
                 className="bg-gray-800 rounded-lg p-4 flex items-center gap-4 hover:bg-gray-700 transition-colors cursor-pointer"
               >
                 <img 
-                  src={skin.image} 
+                  src={(getSkinsNameById(cases,skin.skin) ? getSkinsNameById(cases,skin.skin).img_url : ""  )} 
                   alt={skin.name}
                   className="w-16 h-16 rounded-lg object-cover"
                 />
@@ -141,11 +193,8 @@ const MarketDetail = () => {
                     <span className="text-sm font-bold text-orange-400">
                       ¥{skin.price.toFixed(2)}
                     </span>
-                    <span className={`text-sm flex items-center gap-1 ${
-                      skin.change24h >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {skin.change24h >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                      {Math.abs(skin.change24h).toFixed(1)}%
+                    <span className={`text-sm flex items-center gap-1 text-green-400`}>
+                      ± {(skin.averageSub).toFixed(2)}%
                     </span>
                   </div>
                 </div>
@@ -158,7 +207,7 @@ const MarketDetail = () => {
         </div>
 
         {/* Price Comparison */}
-        <div className="mb-6">
+        {/* <div className="mb-6">
           <h3 className="text-lg font-semibold mb-4">平台价格对比</h3>
           <div className="bg-gray-800 rounded-lg p-4">
             <p className="text-sm text-gray-400 mb-4">以 AK-47 Fire Serpent 为例</p>
@@ -190,7 +239,7 @@ const MarketDetail = () => {
               ))}
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-4">

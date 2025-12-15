@@ -24,7 +24,7 @@ function App() {
             <Route path="/vault" element={<Vault />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/skin/:id" element={<SkinDetail />} />
-            <Route path="/market/:platform/:id" element={<MarketDetail />} />
+            <Route path="/market/:platform" element={<MarketDetail />} />
             <Route path="/arbitrage/:id" element={<ArbitrageDetail />} />
             <Route path="/vault/stake" element={<VaultStake />} />
           </Routes>
