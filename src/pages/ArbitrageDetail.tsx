@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRightLeft, TrendingUp, Calculator, AlertCircle, ExternalLink, BarChart3 } from 'lucide-react';
 import { mockArbitrage } from '../data/mockData';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { api_case, api_index } from '@/utils/request';
+import { base32Decode, getMarketsByName, getSkinsById, getTimeDiffText } from '@/utils/utils';
+import { LoadingPage } from '@/components/LoadingPage';
 
 const ArbitrageDetail = () => {
   const { id } = useParams();
@@ -11,7 +14,86 @@ const ArbitrageDetail = () => {
   const [customQuantity, setCustomQuantity] = useState(1);
   const [showCalculator, setShowCalculator] = useState(false);
 
-  if (!arbitrage) {
+    const [indexData, setIndexData] = useState<any>({});
+  const [cases, setCases] = useState<any>({});
+  const [targetSkin, setTargetSkin] = useState<any>({});
+  const [arbi, setArbi] = useState<any>({});
+  useEffect(() => {
+  const load = async () => {
+    try {
+      const data= await api_index()
+      setIndexData(data?.data);
+      // console.log(data?.data)
+      const cs = await api_case();
+      setCases(cs?.data);
+      try{
+        const raw = base32Decode(String(id)).split("#")
+        if(raw.length<2)
+        {
+          return false;
+        }
+        const [skinId,fromId,toId] = raw;
+        console.log(skinId,fromId,toId)
+
+        //Search target case 
+        for(let i of cs?.data)
+        {
+          if(i?.id == skinId?.toLocaleLowerCase())
+          {
+            const skinData = getSkinsById(data?.data.skins,(skinId as any));
+            i['data'] = skinData
+            let from ;
+            let to ;
+            for(let u of skinData.data)
+            {
+              if(u.name == fromId)
+              {
+                from = u
+                from['info'] = getMarketsByName(data?.data.markets,u.name)
+              }
+              if(u.name == toId)
+              {
+                to = u
+                to['info'] = getMarketsByName(data?.data.markets,u.name)
+              }
+            }
+            if(!from || !to)
+            {
+              return false;
+            }
+
+
+            let arb = {
+              to,
+              from,
+              sub: to.price - from.price,
+              averageSub:skinData.averageSub
+            }
+            setArbi(arb)
+            setTargetSkin(i);
+            console.log(arb)
+          }
+        }
+
+      }catch(e)
+      {
+        console.error(e);
+      }
+
+    } catch (err) {
+      console.error("请求失败:", err);
+    }
+  };
+  load();
+}, []);
+
+  if (!indexData?.skins) {
+    return (
+      <LoadingPage/>
+    );
+  }
+
+  if (!arbi?.from) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
         <div className="text-center">
@@ -28,32 +110,37 @@ const ArbitrageDetail = () => {
     );
   }
 
-  const buyTotal = arbitrage.markets.buy.price * customQuantity;
-  const sellTotal = arbitrage.markets.sell.price * customQuantity;
-  const buyFee = buyTotal * arbitrage.markets.buy.fee;
-  const sellFee = sellTotal * arbitrage.markets.sell.fee;
-  const totalCost = buyTotal + buyFee;
-  const totalRevenue = sellTotal - sellFee;
-  const netProfit = totalRevenue - totalCost;
-  const netProfitPercentage = (netProfit / totalCost) * 100;
+  const buyTotal = arbi.from.price * customQuantity 
+  const sellTotal = arbi.to.price * customQuantity
+  const buyFeeRate = Number(arbi.from.info.seller_fee.split("%")[0])/100
+  const buyFee = buyTotal * buyFeeRate
+  const sellFeeRate = Number(arbi.to.info.seller_fee.split("%")[0])/100
+  const sellFee = sellTotal * sellFeeRate
+  const totalCost = buyTotal + buyFee
+  const totalRevenue = sellTotal - sellFee
+  const netProfit = totalRevenue - totalCost
+  const netProfitPercentage = (netProfit / totalCost) * 100
 
   // Mock historical price data
-  const priceHistory = Array.from({ length: 24 }, (_, i) => ({
-    time: `${i}:00`,
-    buyPrice: arbitrage.markets.buy.price + (Math.random() - 0.5) * 100,
-    sellPrice: arbitrage.markets.sell.price + (Math.random() - 0.5) * 100,
-    arbitrage: arbitrage.markets.sell.price - arbitrage.markets.buy.price + (Math.random() - 0.5) * 20
-  }));
+  // const priceHistory = Array.from({ length: 24 }, (_, i) => ({
+  //   time: `${i}:00`,
+  //   buyPrice: arbitrage.markets.buy.price + (Math.random() - 0.5) * 100,
+  //   sellPrice: arbitrage.markets.sell.price + (Math.random() - 0.5) * 100,
+  //   arbitrage: arbitrage.markets.sell.price - arbitrage.markets.buy.price + (Math.random() - 0.5) * 20
+  // }));
 
-  const getRiskLevelColor = (risk: string) => {
-    switch (risk) {
-      case 'Low': return 'text-green-400 bg-green-400/10';
-      case 'Medium': return 'text-yellow-400 bg-yellow-400/10';
-      case 'High': return 'text-red-400 bg-red-400/10';
-      default: return 'text-gray-400 bg-gray-400/10';
+  const getRiskLevelColor = () => {
+    if(arbi.from.active_offers >10000 && arbi.to.active_offers > 10000)
+    {
+      return 'low'
     }
-  };
+    if(arbi.from.active_offers <1000 && arbi.to.active_offers < 1000)
+    {
+      return 'high'
+    }
 
+    return 'medium'
+  }
   const CalculatorModal = () => (
     <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
       <div className="bg-gray-800 rounded-t-lg p-6 w-full max-w-md animate-slide-up">
@@ -84,15 +171,15 @@ const ArbitrageDetail = () => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">买入成本：</span>
-                <span className="text-white">¥{buyTotal.toFixed(2)}</span>
+                <span className="text-white">${buyTotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">买入手续费 ({arbitrage.markets.buy.fee * 100}%)：</span>
-                <span className="text-white">¥{buyFee.toFixed(2)}</span>
+                <span className="text-gray-400">买入手续费 ({buyFeeRate*100}%)：</span>
+                <span className="text-white">${buyFee.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-bold border-t border-gray-600 pt-2">
                 <span>总成本：</span>
-                <span className="text-white">¥{totalCost.toFixed(2)}</span>
+                <span className="text-white">${totalCost.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -102,15 +189,15 @@ const ArbitrageDetail = () => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">卖出收入：</span>
-                <span className="text-white">¥{sellTotal.toFixed(2)}</span>
+                <span className="text-white">${sellTotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">卖出手续费 ({arbitrage.markets.sell.fee * 100}%)：</span>
-                <span className="text-white">¥{sellFee.toFixed(2)}</span>
+                <span className="text-gray-400">卖出手续费 ({sellFeeRate * 100}%)：</span>
+                <span className="text-white">${sellFee.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-bold border-t border-gray-600 pt-2">
                 <span>净收入：</span>
-                <span className="text-white">¥{totalRevenue.toFixed(2)}</span>
+                <span className="text-white">${totalRevenue.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -120,7 +207,7 @@ const ArbitrageDetail = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-400">净收益金额：</span>
-                <span className="text-green-400 font-bold text-lg">¥{netProfit.toFixed(2)}</span>
+                <span className="text-green-400 font-bold text-lg">${netProfit.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">净收益率：</span>
@@ -159,18 +246,18 @@ const ArbitrageDetail = () => {
         <div className="bg-gray-800 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-4 mb-4">
             <img 
-              src={arbitrage.skin.image} 
-              alt={arbitrage.skin.name}
+              src={targetSkin.img_url} 
+              alt={targetSkin.name}
               className="w-20 h-20 rounded-lg object-cover"
             />
             <div className="flex-1">
-              <h2 className="text-xl font-bold">{arbitrage.skin.name}</h2>
-              <p className="text-gray-400 mb-2">{arbitrage.skin.skin}</p>
+              <h2 className="text-xl font-bold">{targetSkin.name}</h2>
+              <p className="text-gray-400 mb-2">{targetSkin.skin}</p>
               <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 rounded text-xs ${getRiskLevelColor(arbitrage.riskLevel)}`}>
-                  {arbitrage.riskLevel} 风险
+                <span className={`px-2 py-1 rounded text-xs low`}>
+                  ${(targetSkin.data.price).toFixed(3)}
                 </span>
-                <span className="text-xs text-gray-500">交易量: {arbitrage.volume}</span>
+                <span className="text-xs text-gray-500">交易量: {(targetSkin.data.offers).toFixed(0)}</span>
               </div>
             </div>
           </div>
@@ -184,10 +271,10 @@ const ArbitrageDetail = () => {
               <div className="text-center flex-1">
                 <p className="text-sm text-gray-400 mb-2">买入市场</p>
                 <div className="bg-blue-600 rounded-lg p-4">
-                  <p className="font-bold text-white text-lg">{arbitrage.markets.buy.platform}</p>
-                  <p className="text-blue-100 text-sm">手续费 {arbitrage.markets.buy.fee * 100}%</p>
+                  <p className="font-bold text-white text-lg">{arbi.from.name}</p>
+                  <p className="text-blue-100 text-sm">手续费 {arbi.from.info.seller_fee}</p>
                   <p className="text-2xl font-bold text-white mt-2">
-                    ¥{arbitrage.markets.buy.price.toFixed(2)}
+                    ${(arbi.from.price).toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -199,10 +286,10 @@ const ArbitrageDetail = () => {
               <div className="text-center flex-1">
                 <p className="text-sm text-gray-400 mb-2">卖出市场</p>
                 <div className="bg-green-600 rounded-lg p-4">
-                  <p className="font-bold text-white text-lg">{arbitrage.markets.sell.platform}</p>
-                  <p className="text-green-100 text-sm">手续费 {arbitrage.markets.sell.fee * 100}%</p>
+                  <p className="font-bold text-white text-lg">{arbi.to.name}</p>
+                  <p className="text-green-100 text-sm">手续费 {arbi.to.info.seller_fee}</p>
                   <p className="text-2xl font-bold text-white mt-2">
-                    ¥{arbitrage.markets.sell.price.toFixed(2)}
+                    ${(arbi.to.price).toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -213,19 +300,19 @@ const ArbitrageDetail = () => {
                 <div>
                   <p className="text-sm text-gray-400">价格差</p>
                   <p className="text-xl font-bold text-orange-400">
-                    ¥{(arbitrage.markets.sell.price - arbitrage.markets.buy.price).toFixed(2)}
+                    ${((arbi.to.price - arbi.from.price)).toFixed(2)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">套利率</p>
                   <p className="text-xl font-bold text-green-400">
-                    +{arbitrage.profitPercentage.toFixed(2)}%
+                     +{((arbi.to.price - arbi.from.price)*100/arbi.from.price).toFixed(2)}%
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">预估收益</p>
                   <p className="text-xl font-bold text-blue-400">
-                    ¥{arbitrage.potentialProfit.toFixed(2)}
+                    ${((arbi.to.price - arbi.from.price)).toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -234,7 +321,7 @@ const ArbitrageDetail = () => {
         </div>
 
         {/* Price History Chart */}
-        <div className="mb-6">
+        {/* <div className="mb-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <BarChart3 className="text-orange-500" size={20} />
             价格历史走势
@@ -292,10 +379,10 @@ const ArbitrageDetail = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Market Links */}
-        <div className="mb-6">
+        {/* <div className="mb-6">
           <h3 className="text-lg font-semibold mb-4">快速跳转</h3>
           <div className="grid grid-cols-2 gap-4">
             <button 
@@ -313,40 +400,37 @@ const ArbitrageDetail = () => {
               {arbitrage.markets.sell.platform}
             </button>
           </div>
-        </div>
+        </div> */}
 
         {/* Risk Assessment */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-4">风险评估</h3>
-          <div className={`rounded-lg p-4 ${getRiskLevelColor(arbitrage.riskLevel)}`}>
+          <div className={`rounded-lg p-4 ${getRiskLevelColor()}`}>
             <div className="flex items-center gap-2 mb-3">
               <AlertCircle size={20} />
-              <span className="font-bold">{arbitrage.riskLevel} 风险</span>
+              <span className="font-bold">{getRiskLevelColor().toUpperCase()} 风险</span>
             </div>
             
             <div className="space-y-2 text-sm">
-              {arbitrage.riskLevel === 'Low' && (
+              {getRiskLevelColor() === 'low' &&  (
                 <>
-                  <p>• 价格波动相对稳定</p>
                   <p>• 流动性充足</p>
-                  <p>• 市场深度良好</p>
-                  <p>• 建议操作时间: 小于 30分钟</p>
+                  <p>• 买方挂单量 : {(arbi.from.active_offers).toFixed(0)}</p>
+                  <p>• 卖方挂单量 : {(arbi.to.active_offers).toFixed(0)}</p>
                 </>
               )}
-              {arbitrage.riskLevel === 'Medium' && (
+              {getRiskLevelColor() === 'medium' && (
                 <>
-                  <p>• 价格存在一定波动</p>
-                  <p>• 流动性中等</p>
-                  <p>• 建议控制交易量</p>
-                  <p>• 建议操作时间: 小于 15分钟</p>
+                  <p>• 流动性轻微不足</p>
+                  <p>• 买方挂单量 : {(arbi.from.active_offers).toFixed(0)}</p>
+                  <p>• 卖方挂单量 : {(arbi.to.active_offers).toFixed(0)}</p>
                 </>
               )}
-              {arbitrage.riskLevel === 'High' && (
+              {getRiskLevelColor() === 'high' && (
                 <>
-                  <p>• 价格波动较大</p>
-                  <p>• 流动性有限</p>
-                  <p>• 建议小额操作</p>
-                  <p>• 建议操作时间: 小于 5分钟</p>
+                  <p>• 流动性严重不足</p>
+                  <p>• 买方挂单量 : {(arbi.from.active_offers).toFixed(0)}</p>
+                  <p>• 卖方挂单量 : {(arbi.to.active_offers).toFixed(0)}</p>
                 </>
               )}
             </div>
@@ -355,7 +439,7 @@ const ArbitrageDetail = () => {
 
         {/* Last Updated */}
         <div className="text-center text-sm text-gray-500">
-          最后更新: {arbitrage.lastUpdated}
+          最后更新: {getTimeDiffText(targetSkin.data.timestamp)}
         </div>
       </div>
 

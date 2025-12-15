@@ -190,7 +190,7 @@ const Home = () => {
                 />
                 <div className="flex-1">
                   <h4 className="font-medium">{caseItem.name}</h4>
-                  <p className="text-sm text-gray-400">￥{(getSkinsById(indexData.skins,caseItem.id) ? getSkinsById(indexData.skins,caseItem.id).price*7 : 0  ).toFixed(2)}</p>
+                  <p className="text-sm text-gray-400">${(getSkinsById(indexData.skins,caseItem.id) ? getSkinsById(indexData.skins,caseItem.id).price : 0  ).toFixed(2)}</p>
                   <p className={`text-xs text-green-400`}>
                      ± {(getSkinsById(indexData.skins,caseItem.id) ? getSkinsById(indexData.skins,caseItem.id).averageSub*100 : 0  ).toFixed(2)}%
                   </p>
@@ -224,7 +224,7 @@ const Home = () => {
                      {arbitrage.from.name} → {arbitrage.to.name}
                   </span>
                   <span className="text-orange-400">
-                    ¥ {(arbitrage.skin.averageSub * arbitrage.skin.price*7).toFixed(2)}
+                    ¥ {(arbitrage.skin.averageSub * arbitrage.skin.price).toFixed(2)}
                   </span>
                 </div>
               </div>

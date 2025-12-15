@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRightLeft, TrendingUp, AlertTriangle, Calculator, Filter } from 'lucide-react';
 import { mockArbitrage } from '../data/mockData';
 import { ArbitrageOpportunity } from '../types';
+import { api_case, api_index } from '@/utils/request';
+import { LoadingPage } from '@/components/LoadingPage';
+import { base32Encode, getSkinsNameById } from '@/utils/utils';
 
 const Arbitrage = () => {
   const navigate = useNavigate();
@@ -10,6 +13,30 @@ const Arbitrage = () => {
   const [selectedProfitRange, setSelectedProfitRange] = useState('全部');
   const [showCalculator, setShowCalculator] = useState(false);
 
+  const [indexData, setIndexData] = useState<any>({});
+  const [cases, setCases] = useState<any>({});
+  const [arbi, setArbi] = useState<any>([]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data= await api_index()
+        setIndexData(data?.data);
+        console.log(data?.data)
+        const cs = await api_case();
+        setCases(cs?.data);
+        setArbi(data.data.topSkinSub);
+      } catch (err) {
+        console.error("请求失败:", err);
+      }
+    };
+
+    load();
+  }, []);
+  if (!indexData?.skins) {
+    return (
+      <LoadingPage/>
+    );
+  }
   const platformOptions = [
     '全部',
     'Buff↔Steam',
@@ -35,6 +62,19 @@ const Arbitrage = () => {
     
     return platformMatch && profitMatch;
   });
+
+  const getRiskLevelColor = (arbi:any) => {
+    if(arbi.from.active_offers >10000 && arbi.to.active_offers > 10000)
+    {
+      return 'low'
+    }
+    if(arbi.from.active_offers <1000 && arbi.to.active_offers < 1000)
+    {
+      return 'high'
+    }
+
+    return 'medium'
+  }
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
@@ -181,7 +221,7 @@ const Arbitrage = () => {
         </div>
 
         {/* Filters */}
-        <div className="space-y-3">
+        {/* <div className="space-y-3">
           <div>
             <label className="block text-sm text-gray-400 mb-2">平台组合</label>
             <div className="flex gap-2 overflow-x-auto pb-2">
@@ -219,7 +259,7 @@ const Arbitrage = () => {
               ))}
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Stats */}
@@ -227,18 +267,18 @@ const Arbitrage = () => {
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-sm text-gray-400">可用机会</p>
-            <p className="text-xl font-bold text-white">{filteredArbitrage.length}</p>
+            <p className="text-xl font-bold text-white">{indexData.greatProfit}</p>
           </div>
           <div>
             <p className="text-sm text-gray-400">平均收益</p>
             <p className="text-xl font-bold text-green-400">
-              {(filteredArbitrage.reduce((sum, arb) => sum + arb.profitPercentage, 0) / filteredArbitrage.length || 0).toFixed(1)}%
+             ±{(indexData.skinsAverageSub*100).toFixed(2)}%
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-400">预估总量</p>
             <p className="text-xl font-bold text-orange-400">
-              {filteredArbitrage.reduce((sum, arb) => sum + arb.volume, 0)}
+              ±{(indexData.profitRate*100).toFixed(2)}%
             </p>
           </div>
         </div>
@@ -253,16 +293,21 @@ const Arbitrage = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredArbitrage.map((arbitrage) => (
+            {(selectedProfitRange == "全部" ? arbi : arbi.filter((item:any) => 
+              (item.to.price - item.from.price)*100 / item.from.price
+              >= 
+              Number(selectedProfitRange.split("%")[0])
+            )
+            ).map((arbitrage) => (
               <div 
-                key={arbitrage.id}
-                onClick={() => navigate(`/arbitrage/${arbitrage.id}`)}
+                key={base32Encode(`${arbitrage.skin.skin}#${arbitrage.from.name}#${arbitrage.to.name}`)}
+                onClick={() => navigate(`/arbitrage/${base32Encode(`${arbitrage.skin.skin}#${arbitrage.from.name}#${arbitrage.to.name}`)}`)}
                 className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors cursor-pointer"
               >
                 {/* Skin Info */}
                 <div className="flex items-center gap-3 mb-4">
                   <img 
-                    src={arbitrage.skin.image} 
+                    src={getSkinsNameById(cases,arbitrage.skin.skin) ? getSkinsNameById(cases,arbitrage.skin.skin).img_url : ""}
                     alt={arbitrage.skin.name}
                     className="w-16 h-16 rounded-lg object-cover"
                   />
@@ -270,10 +315,10 @@ const Arbitrage = () => {
                     <h3 className="font-bold text-white">{arbitrage.skin.name}</h3>
                     <p className="text-sm text-gray-400">{arbitrage.skin.skin}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className={`px-2 py-1 rounded text-xs ${getRiskColor(arbitrage.riskLevel)}`}>
-                        {arbitrage.riskLevel} 风险
+                      <span className={`px-2 py-1 rounded text-xs ${getRiskLevelColor(arbitrage)}`}>
+                        {getRiskLevelColor(arbitrage)} 风险
                       </span>
-                      <span className="text-xs text-gray-500">交易量: {arbitrage.volume}</span>
+                      <span className="text-xs text-gray-500">交易量: {(arbitrage.skin.offers).toFixed(0)}</span>
                     </div>
                   </div>
                 </div>
@@ -283,9 +328,9 @@ const Arbitrage = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-center flex-1">
                       <p className="text-xs text-gray-400">买入市场</p>
-                      <p className="text-sm font-bold text-white">{arbitrage.markets.buy.platform}</p>
+                      <p className="text-sm font-bold text-white">{arbitrage.from.name}</p>
                       <p className="text-lg font-bold text-blue-400">
-                        ¥{arbitrage.markets.buy.price.toFixed(2)}
+                        ${(arbitrage.from.price).toFixed(2)}
                       </p>
                     </div>
                     <div className="px-3">
@@ -293,9 +338,9 @@ const Arbitrage = () => {
                     </div>
                     <div className="text-center flex-1">
                       <p className="text-xs text-gray-400">卖出市场</p>
-                      <p className="text-sm font-bold text-white">{arbitrage.markets.sell.platform}</p>
+                      <p className="text-sm font-bold text-white">{arbitrage.to.name}</p>
                       <p className="text-lg font-bold text-green-400">
-                        ¥{arbitrage.markets.sell.price.toFixed(2)}
+                        ${(arbitrage.to.price).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -305,10 +350,10 @@ const Arbitrage = () => {
                       <span className="text-sm text-gray-400">套利空间</span>
                       <div className="text-right">
                         <p className="text-lg font-bold text-orange-400">
-                          +{arbitrage.profitPercentage.toFixed(2)}%
+                          +{((arbitrage.to.price - arbitrage.from.price)*100 / arbitrage.from.price).toFixed(2)}%
                         </p>
                         <p className="text-sm text-white">
-                          ¥{arbitrage.potentialProfit.toFixed(2)}
+                          ${((arbitrage.to.price - arbitrage.from.price)).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -320,14 +365,14 @@ const Arbitrage = () => {
                   <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium transition-colors">
                     查看详情
                   </button>
-                  <button className="px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">
+                  {/* <button className="px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">
                     模拟计算
-                  </button>
+                  </button> */}
                 </div>
 
                 {/* Last Updated */}
                 <p className="text-xs text-gray-500 mt-2 text-center">
-                  最后更新: {arbitrage.lastUpdated}
+                  最后更新: {(new Date(arbitrage.skin.timestamp)).toLocaleString()}
                 </p>
               </div>
             ))}
