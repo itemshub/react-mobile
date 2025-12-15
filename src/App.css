@@ -1,0 +1,262 @@
+/* 移动端基础样式 */
+#root {
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+/* 像素风效果 */
+.pixel-border {
+  border: 2px solid #000;
+  box-shadow: 4px 4px 0 #000;
+}
+
+.pixel-border-sm {
+  border: 1px solid #000;
+  box-shadow: 2px 2px 0 #000;
+}
+
+.pixel-text {
+  text-shadow: 2px 2px 0 #000;
+}
+
+/* 橙色发光效果 */
+.glow-orange {
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.5);
+}
+
+.glow-orange-sm {
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+}
+
+/* 滑动动画 */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* 淡入动画 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+/* 缩放动画 */
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+/* 脉动动画 */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+/* 移动端滚动条隐藏 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 卡片悬浮效果 */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* 按钮点击效果 */
+.btn-press {
+  transition: all 0.1s ease;
+}
+
+.btn-press:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 #000;
+}
+
+/* 价格上涨效果 */
+@keyframes price-up {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); color: #10b981; }
+  100% { transform: scale(1); }
+}
+
+.price-up {
+  animation: price-up 0.3s ease;
+}
+
+/* 价格下跌效果 */
+@keyframes price-down {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); color: #ef4444; }
+  100% { transform: scale(1); }
+}
+
+.price-down {
+  animation: price-down 0.3s ease;
+}
+
+/* 加载动画 */
+.loading-dots {
+  display: inline-block;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+/* 网格布局优化 */
+.grid-auto-fit {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.grid-auto-fill {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* 移动端触摸优化 */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* 移动端安全区域适配 */
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* 文字选择优化 */
+.select-none {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 渐变背景 */
+.gradient-bg {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+}
+
+.gradient-orange {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+
+/* 毛玻璃效果 */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-md {
+  backdrop-filter: blur(8px);
+}
+
+/* 响应式字体大小 */
+.text-responsive {
+  font-size: clamp(0.875rem, 2.5vw, 1rem);
+}
+
+.text-responsive-lg {
+  font-size: clamp(1rem, 3vw, 1.25rem);
+}
+
+.text-responsive-xl {
+  font-size: clamp(1.125rem, 3.5vw, 1.5rem);
+}
+
+/* 移动端特定样式 */
+@media (max-width: 640px) {
+  .mobile-padding {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .mobile-text-sm {
+    font-size: 0.875rem;
+  }
+  
+  .mobile-gap-2 {
+    gap: 0.5rem;
+  }
+}
+
+/* 深色模式优化 */
+.dark {
+  color-scheme: dark;
+}
+
+/* 自定义滚动条 */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #64748b #1e293b;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
